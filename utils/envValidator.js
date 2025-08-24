@@ -3,13 +3,6 @@ const requiredEnvVars = [
   'JWT_SECRET'
 ];
 
-const optionalEnvVars = [
-  'OPENROUTER_API_KEY',
-  'DEEPSEEK_API_KEY',
-  'PORT',
-  'NODE_ENV'
-];
-
 function validateEnvironment() {
   const missing = [];
   const warnings = [];

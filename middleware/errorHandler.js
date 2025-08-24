@@ -60,7 +60,7 @@ const sendErrorProd = (err, res) => {
   }
 };
 
-const globalErrorHandler = (err, req, res, next) => {
+const globalErrorHandler = (err, req, res, _next) => {
   err.statusCode = err.statusCode || 500;
   err.status = err.status || 'error';
 
@@ -81,15 +81,19 @@ const globalErrorHandler = (err, req, res, next) => {
 };
 
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (err, promise) => {
+process.on('unhandledRejection', (err, _promise) => {
   logger.error('Unhandled Promise Rejection:', err.message);
-  process.exit(1);
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
 });
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
   logger.error('Uncaught Exception:', err.message);
-  process.exit(1);
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
 });
 
 module.exports = { AppError, globalErrorHandler };

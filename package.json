@@ -4,7 +4,15 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint *.js middleware/ models/ services/ utils/ config/",
+    "lint:fix": "eslint *.js middleware/ models/ services/ utils/ config/ --fix",
+    "format": "prettier --write *.js middleware/ models/ services/ utils/ config/ public/",
+    "validate": "npm run lint && npm run test",
+    "security-check": "npm audit"
   },
   "keywords": [
     "fitness",
@@ -31,6 +39,7 @@
     "winston": "^3.17.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.34.0",
     "@ljharb/tsconfig": "^0.3.2",
     "eslint": "^9.34.0",
     "jest": "^30.0.5",

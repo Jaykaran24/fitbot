@@ -1,12 +1,24 @@
-const fs = require('fs');
 require('dotenv').config({ path: './.env' });
+
+// Validate environment variables before starting
+const { validateEnvironment } = require('./utils/envValidator');
+validateEnvironment();
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const helmet = require('helmet');
+const compression = require('compression');
+const cors = require('cors');
+
 const FitBotAI = require('./fitbotAI');
 const connectDB = require('./config/database');
 const { generateToken, verifyToken } = require('./middleware/auth');
+const { globalErrorHandler } = require('./middleware/errorHandler');
+const { authLimiter, chatLimiter, generalLimiter } = require('./middleware/rateLimiting');
+const { validateSignup, validateLogin, validateProfile, validateChat } = require('./middleware/validation');
+
 const User = require('./models/User');
 const ChatLog = require('./models/ChatLog');
 const { getOpenRouterReply } = require('./services/openrouter');
@@ -17,7 +29,52 @@ const PORT = process.env.PORT || 3000;
 // Connect to MongoDB
 connectDB();
 
-app.use(bodyParser.json());
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'", 
+        "'unsafe-inline'", // Allow inline scripts for onclick handlers
+        "https://cdnjs.cloudflare.com" // For Font Awesome
+      ],
+      scriptSrcAttr: [
+        "'unsafe-hashes'",
+        "'sha256-7D4OnRgLor9G48wlkm6NUsKU/p4hUGd3fwTQ6bRSkM8='", // showSignup()
+        "'sha256-vs4Ai6/4DL/jsAXmXc7ATjXJvTYFX0IEXLdBMuXXVVM='", // showLogin()
+        "'sha256-jLce0FJZHjAZi0FFNSt3pVWU0SFmpBBj9uwrNuFzn3Q='", // showProfile()
+        "'sha256-mxqgBLcP6wgRQOjHETJ0fhNDwEJ8u2VVjo+ZlAWFeMg='", // logout()
+        "'sha256-EOPWvc/cgFzQC85gXxLfaFVJT1jjcNPeN23DiNU6r+4='", // sendMessage()
+        "'sha256-bfhnJg5KmK2OTc7cUTKC9uT7Dl00nAtKYNk5Tjc9Ni4='", // closeProfile()
+        "'sha256-07ZIXKHMSc3Hda9x9r5CcgzKbnKgFKJbrm02nzwldi0='"  // editProfile()
+      ],
+      styleSrc: [
+        "'self'", 
+        "'unsafe-inline'", // Allow inline styles
+        "https://cdnjs.cloudflare.com" // For Font Awesome
+      ],
+      fontSrc: [
+        "'self'",
+        "https://cdnjs.cloudflare.com" // For Font Awesome fonts
+      ],
+      imgSrc: ["'self'", "data:"],
+      connectSrc: ["'self'"]
+    }
+  }
+}));
+app.use(compression());
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.ALLOWED_ORIGINS?.split(',') || ['https://yourdomain.com']
+    : ['http://localhost:3000', 'http://127.0.0.1:3000'],
+  credentials: true
+}));
+
+// General rate limiting
+app.use(generalLimiter);
+
+app.use(bodyParser.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Initialize Fit Bot AI
@@ -29,7 +86,7 @@ app.get('/', (req, res) => {
 });
 
 // Authentication endpoints
-app.post('/api/auth/signup', async (req, res) => {
+app.post('/api/auth/signup', authLimiter, validateSignup, async (req, res) => {
   try {
     const { name, email, password } = req.body;
     
@@ -73,7 +130,7 @@ app.post('/api/auth/signup', async (req, res) => {
   }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, validateLogin, async (req, res) => {
   try {
     const { email, password } = req.body;
     
@@ -112,7 +169,7 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // Chat endpoint
-app.post('/api/chat', verifyToken, async (req, res) => {
+app.post('/api/chat', chatLimiter, verifyToken, validateChat, async (req, res) => {
   try {
     const { message, userData, useExternalAI } = req.body;
     if (!message) {
@@ -175,7 +232,7 @@ app.post('/api/chat', verifyToken, async (req, res) => {
 });
 
 // Endpoint to set user profile
-app.post('/api/profile', verifyToken, async (req, res) => {
+app.post('/api/profile', verifyToken, validateProfile, async (req, res) => {
   try {
     const { weight, height, age, gender, activityLevel } = req.body;
     
@@ -259,7 +316,10 @@ app.get('/api/profile', verifyToken, async (req, res) => {
   }
 });
 
+// Global error handling middleware (must be last)
+app.use(globalErrorHandler);
+
 app.listen(PORT, () => {
   console.log(`Fit Bot server running on port ${PORT}`);
   console.log(`Open http://localhost:${PORT} in your browser`);
-}); 
+});
