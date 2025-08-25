@@ -119,6 +119,12 @@
                 <h2>Fit Bot</h2>
             </div>
             <div class="chat-header-right">
+                <button class="btn-secondary" onclick="openFoodSearch()">
+                    <i class="fas fa-search"></i> Search Food
+                </button>
+                <button class="btn-secondary" onclick="openNutritionDashboard()">
+                    <i class="fas fa-chart-pie"></i> Daily Nutrition
+                </button>
                 <button class="btn-secondary" onclick="showProfile()">
                     <i class="fas fa-user"></i> Profile
                 </button>
@@ -157,6 +163,269 @@
                     <!-- Profile info will be loaded here -->
                 </div>
                 <button class="btn-primary" onclick="editProfile()">Edit Profile</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Food Search Modal -->
+    <div id="foodSearchModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Search Food Database</h3>
+                <button class="close-btn" onclick="closeFoodSearch()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="food-search-container">
+                    <div class="search-input-group">
+                        <input type="text" id="foodSearchInput" placeholder="Search for food (e.g., apple, chicken breast, coca cola)..." />
+                        <button onclick="searchFood()" class="btn-primary">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    
+                    <div id="foodSearchResults" class="food-results">
+                        <!-- Search results will appear here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Food Logging Modal -->
+    <div id="foodLogModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Log Food</h3>
+                <button class="close-btn" onclick="closeFoodLog()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="selectedFoodInfo">
+                    <!-- Selected food info will appear here -->
+                </div>
+                <form id="foodLogForm">
+                    <div class="form-group">
+                        <label for="mealType">Meal Type</label>
+                        <select id="mealType" required>
+                            <option value="">Select meal type</option>
+                            <option value="breakfast">Breakfast</option>
+                            <option value="lunch">Lunch</option>
+                            <option value="dinner">Dinner</option>
+                            <option value="snack">Snack</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="servingAmount">Serving Amount</label>
+                            <input type="number" id="servingAmount" step="0.1" min="0.1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="servingUnit">Unit</label>
+                            <select id="servingUnit">
+                                <option value="g">grams (g)</option>
+                                <option value="ml">milliliters (ml)</option>
+                                <option value="oz">ounces (oz)</option>
+                                <option value="cup">cups</option>
+                                <option value="piece">pieces</option>
+                                <option value="slice">slices</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="calculatedNutrition" class="nutrition-preview">
+                        <!-- Calculated nutrition will appear here -->
+                    </div>
+                    <button type="submit" class="btn-primary">Log Food</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Nutrition Dashboard Modal -->
+    <div id="nutritionDashboard" class="modal hidden">
+        <div class="modal-content nutrition-dashboard">
+            <div class="modal-header">
+                <h3>Daily Nutrition Dashboard</h3>
+                <div class="dashboard-header-buttons">
+                    <button class="btn-secondary" onclick="openGoalsModal()">
+                        <i class="fas fa-target"></i> Set Goals
+                    </button>
+                    <button class="close-btn" onclick="closeNutritionDashboard()">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="dashboard-date-selector">
+                    <button onclick="changeDate(-1)" class="btn-secondary">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span id="selectedDate"></span>
+                    <button onclick="changeDate(1)" class="btn-secondary">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+                
+                <div class="nutrition-summary">
+                    <div class="nutrition-overview">
+                        <div class="calories-card">
+                            <h4>Calories</h4>
+                            <div class="progress-circle">
+                                <span id="caloriesConsumed">0</span> / <span id="caloriesGoal">2000</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div id="caloriesProgress" class="progress-fill"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="macros-grid">
+                        <div class="macro-card">
+                            <h5>Protein</h5>
+                            <div class="macro-info">
+                                <span id="proteinConsumed">0</span>g / <span id="proteinGoal">150</span>g
+                            </div>
+                            <div class="progress-bar">
+                                <div id="proteinProgress" class="progress-fill protein"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="macro-card">
+                            <h5>Carbs</h5>
+                            <div class="macro-info">
+                                <span id="carbsConsumed">0</span>g / <span id="carbsGoal">250</span>g
+                            </div>
+                            <div class="progress-bar">
+                                <div id="carbsProgress" class="progress-fill carbs"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="macro-card">
+                            <h5>Fat</h5>
+                            <div class="macro-info">
+                                <span id="fatConsumed">0</span>g / <span id="fatGoal">67</span>g
+                            </div>
+                            <div class="progress-bar">
+                                <div id="fatProgress" class="progress-fill fat"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="macro-card">
+                            <h5>Fiber</h5>
+                            <div class="macro-info">
+                                <span id="fiberConsumed">0</span>g / <span id="fiberGoal">25</span>g
+                            </div>
+                            <div class="progress-bar">
+                                <div id="fiberProgress" class="progress-fill fiber"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="meals-breakdown">
+                    <h4>Meals Breakdown</h4>
+                    <div class="meals-grid">
+                        <div class="meal-card">
+                            <h5><i class="fas fa-sun"></i> Breakfast</h5>
+                            <div id="breakfastFoods" class="meal-foods">
+                                <p class="no-foods">No foods logged</p>
+                            </div>
+                            <div class="meal-calories">
+                                <span id="breakfastCalories">0</span> calories
+                            </div>
+                        </div>
+                        
+                        <div class="meal-card">
+                            <h5><i class="fas fa-sun-o"></i> Lunch</h5>
+                            <div id="lunchFoods" class="meal-foods">
+                                <p class="no-foods">No foods logged</p>
+                            </div>
+                            <div class="meal-calories">
+                                <span id="lunchCalories">0</span> calories
+                            </div>
+                        </div>
+                        
+                        <div class="meal-card">
+                            <h5><i class="fas fa-moon"></i> Dinner</h5>
+                            <div id="dinnerFoods" class="meal-foods">
+                                <p class="no-foods">No foods logged</p>
+                            </div>
+                            <div class="meal-calories">
+                                <span id="dinnerCalories">0</span> calories
+                            </div>
+                        </div>
+                        
+                        <div class="meal-card">
+                            <h5><i class="fas fa-cookie-bite"></i> Snacks</h5>
+                            <div id="snackFoods" class="meal-foods">
+                                <p class="no-foods">No foods logged</p>
+                            </div>
+                            <div class="meal-calories">
+                                <span id="snackCalories">0</span> calories
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="nutrition-tips">
+                    <h4>Today's Nutrition Insights</h4>
+                    <div id="nutritionTips" class="tips-content">
+                        <!-- AI-generated tips will appear here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nutrition Goals Modal -->
+    <div id="nutritionGoalsModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Set Nutrition Goals</h3>
+                <button class="close-btn" onclick="closeGoalsModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="nutritionGoalsForm">
+                    <div class="form-group">
+                        <label for="caloriesGoalInput">Daily Calories Goal</label>
+                        <input type="number" id="caloriesGoalInput" min="1000" max="5000" required>
+                        <small class="form-help">Recommended: 1800-2500 calories per day</small>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="proteinGoalInput">Protein (g)</label>
+                            <input type="number" id="proteinGoalInput" min="50" max="300">
+                        </div>
+                        <div class="form-group">
+                            <label for="carbsGoalInput">Carbohydrates (g)</label>
+                            <input type="number" id="carbsGoalInput" min="100" max="500">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="fatGoalInput">Fat (g)</label>
+                            <input type="number" id="fatGoalInput" min="30" max="200">
+                        </div>
+                        <div class="form-group">
+                            <label for="fiberGoalInput">Fiber (g)</label>
+                            <input type="number" id="fiberGoalInput" min="15" max="50">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="goalTypeSelect">Goal Type</label>
+                        <select id="goalTypeSelect">
+                            <option value="maintain">Maintain Weight</option>
+                            <option value="lose">Lose Weight</option>
+                            <option value="gain">Gain Weight</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" onclick="calculateDefaultGoals()" class="btn-secondary">
+                            <i class="fas fa-calculator"></i> Calculate Defaults
+                        </button>
+                        <button type="submit" class="btn-primary">Save Goals</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

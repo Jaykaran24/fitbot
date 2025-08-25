@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard Debug</title>
+</head>
+<body>
+    <h1>Dashboard Debug</h1>
+    <div id="status">Testing...</div>
+    <div id="result"></div>
+    
+    <script>
+        async function testDashboard() {
+            const status = document.getElementById('status');
+            const result = document.getElementById('result');
+            
+            try {
+                // Check if token exists
+                const token = localStorage.getItem('fitbot_token');
+                status.innerHTML = 'Token check: ' + (token ? 'Found' : 'Not found');
+                
+                if (!token) {
+                    result.innerHTML = 'No token found. Please log in first.';
+                    return;
+                }
+                
+                // Test API call
+                const response = await fetch('/api/nutrition/daily/2025-08-25', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                status.innerHTML += '<br>API Response Status: ' + response.status;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    result.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+                } else {
+                    const error = await response.text();
+                    result.innerHTML = 'Error: ' + error;
+                }
+                
+            } catch (error) {
+                result.innerHTML = 'Exception: ' + error.message;
+            }
+        }
+        
+        // Run test when page loads
+        testDashboard();
+    </script>
+</body>
+</html>

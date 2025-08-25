@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FitBot Food Search Test</title>
+</head>
+<body>
+    <h1>FitBot Food Search Test</h1>
+    <p>This is a simple test page to verify the food search functionality is working without CSP errors.</p>
+    
+    <button onclick="testFoodSearch()">Test Food Search</button>
+    <button onclick="testFoodLog()">Test Food Log</button>
+    
+    <div id="results"></div>
+    
+    <script>
+        function testFoodSearch() {
+            document.getElementById('results').innerHTML = 'Food search function called successfully!';
+        }
+        
+        function testFoodLog() {
+            document.getElementById('results').innerHTML = 'Food log function called successfully!';
+        }
+        
+        // Test if our main functions exist
+        window.onload = function() {
+            if (typeof openFoodSearch === 'function') {
+                console.log('✅ openFoodSearch function exists');
+            } else {
+                console.log('❌ openFoodSearch function missing');
+            }
+            
+            if (typeof closeFoodSearch === 'function') {
+                console.log('✅ closeFoodSearch function exists');
+            } else {
+                console.log('❌ closeFoodSearch function missing');
+            }
+        };
+    </script>
+</body>
+</html>

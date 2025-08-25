@@ -115,7 +115,22 @@ class FitBotAI {
     
     // Check for greetings
     if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
-      return 'Hello! I\'m Fit Bot, your personal nutrition and fitness assistant. I can help you track your daily nutrient intake and provide personalized advice based on your BMI and activity level. What would you like to know?';
+      return 'Hello! I\'m Fit Bot, your personal nutrition and fitness assistant. I can help you track your daily nutrient intake, search for foods, log meals, and provide personalized advice based on your BMI and activity level. What would you like to know?';
+    }
+
+    // Check for food search requests
+    if (lowerMessage.includes('search') && (lowerMessage.includes('food') || lowerMessage.includes('find'))) {
+      return 'I can help you search for foods! You can use the food search feature to find nutritional information about thousands of products. Try searching for specific food items, brands, or ingredients.';
+    }
+
+    // Check for meal logging requests
+    if (lowerMessage.includes('log') && (lowerMessage.includes('food') || lowerMessage.includes('meal') || lowerMessage.includes('eat'))) {
+      return 'To log your meals, you can use the food logging feature. Search for the food you ate, select the correct item, specify the portion size, and add it to your daily log. This will help track your daily nutrition intake.';
+    }
+
+    // Check for nutrition tracking requests
+    if (lowerMessage.includes('track') || lowerMessage.includes('progress') || lowerMessage.includes('calories')) {
+      return 'I can help you track your nutrition! Check your daily food log to see your calorie and nutrient intake. You can also set nutrition goals based on your fitness objectives (weight loss, maintenance, or gain).';
     }
 
     // Check for BMI calculation request
@@ -160,7 +175,7 @@ class FitBotAI {
 
     // Check for help
     if (lowerMessage.includes('help') || lowerMessage.includes('what can you do')) {
-      return 'I can help you with:\n• Calculate your BMI\n• Provide personalized nutrition advice\n• Explain activity levels\n• Track your daily nutrient intake\n\nJust ask me about any of these topics!';
+      return 'I can help you with:\n• Calculate your BMI\n• Provide personalized nutrition advice\n• Search for food products and nutrition info\n• Log your meals and track daily intake\n• Set and monitor nutrition goals\n• Explain activity levels\n\nJust ask me about any of these topics!';
     }
 
     // Default response

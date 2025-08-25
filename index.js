@@ -17,17 +17,23 @@ const connectDB = require('./config/database');
 const { generateToken, verifyToken } = require('./middleware/auth');
 const { globalErrorHandler } = require('./middleware/errorHandler');
 const { authLimiter, chatLimiter, generalLimiter } = require('./middleware/rateLimiting');
-const { validateSignup, validateLogin, validateProfile, validateChat } = require('./middleware/validation');
+const { validateSignup, validateLogin, validateProfile, validateChat, validateFoodLog, validateNutritionGoals } = require('./middleware/validation');
 
 const User = require('./models/User');
 const ChatLog = require('./models/ChatLog');
+const { FoodEntry, NutritionGoal } = require('./models/Food');
 const { getOpenRouterReply } = require('./services/openrouter');
+const { searchFood, getFoodDetails, calculateServingNutrition } = require('./services/openFoodFacts');
+const { initializeLocalDatabase } = require('./services/localFoodDatabase');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Connect to MongoDB
 connectDB();
+
+// Initialize local food database
+initializeLocalDatabase();
 
 // Security middleware
 app.use(helmet({
@@ -40,14 +46,7 @@ app.use(helmet({
         "https://cdnjs.cloudflare.com" // For Font Awesome
       ],
       scriptSrcAttr: [
-        "'unsafe-hashes'",
-        "'sha256-7D4OnRgLor9G48wlkm6NUsKU/p4hUGd3fwTQ6bRSkM8='", // showSignup()
-        "'sha256-vs4Ai6/4DL/jsAXmXc7ATjXJvTYFX0IEXLdBMuXXVVM='", // showLogin()
-        "'sha256-jLce0FJZHjAZi0FFNSt3pVWU0SFmpBBj9uwrNuFzn3Q='", // showProfile()
-        "'sha256-mxqgBLcP6wgRQOjHETJ0fhNDwEJ8u2VVjo+ZlAWFeMg='", // logout()
-        "'sha256-EOPWvc/cgFzQC85gXxLfaFVJT1jjcNPeN23DiNU6r+4='", // sendMessage()
-        "'sha256-bfhnJg5KmK2OTc7cUTKC9uT7Dl00nAtKYNk5Tjc9Ni4='", // closeProfile()
-        "'sha256-07ZIXKHMSc3Hda9x9r5CcgzKbnKgFKJbrm02nzwldi0='"  // editProfile()
+        "'unsafe-inline'" // Allow all inline script attributes for testing
       ],
       styleSrc: [
         "'self'", 
@@ -313,6 +312,323 @@ app.get('/api/profile', verifyToken, async (req, res) => {
   } catch (error) {
     console.error('Error fetching profile:', error);
     res.status(500).json({ error: 'Failed to fetch profile' });
+  }
+});
+
+// Food API endpoints
+
+// Test food search without authentication (for debugging)
+app.post('/api/food/search/test', async (req, res) => {
+  try {
+    const { query, limit = 10 } = req.body;
+    
+    if (!query || query.trim().length < 2) {
+      return res.status(400).json({ error: 'Search query must be at least 2 characters long' });
+    }
+    
+    const foods = await searchFood(query.trim(), parseInt(limit));
+    res.json({ products: foods });
+  } catch (error) {
+    console.error('Food search test error:', error);
+    res.status(500).json({ error: 'Failed to search food database', details: error.message });
+  }
+});
+
+// Search for food products
+app.post('/api/food/search', verifyToken, async (req, res) => {
+  try {
+    const { query, limit = 10 } = req.body;
+    
+    if (!query || query.trim().length < 2) {
+      return res.status(400).json({ error: 'Search query must be at least 2 characters long' });
+    }
+    
+    const foods = await searchFood(query.trim(), parseInt(limit));
+    res.json({ products: foods }); // Changed to match frontend expectation
+  } catch (error) {
+    console.error('Food search error:', error);
+    res.status(500).json({ error: 'Failed to search food database' });
+  }
+});
+
+// Get detailed food information
+app.get('/api/food/:barcode', verifyToken, async (req, res) => {
+  try {
+    const { barcode } = req.params;
+    const food = await getFoodDetails(barcode);
+    res.json({ food });
+  } catch (error) {
+    console.error('Food details error:', error);
+    if (error.message === 'Product not found') {
+      res.status(404).json({ error: 'Food product not found' });
+    } else {
+      res.status(500).json({ error: 'Failed to get food details' });
+    }
+  }
+});
+
+// Log food entry
+app.post('/api/food/log', verifyToken, validateFoodLog, async (req, res) => {
+  try {
+    const { foodId, foodName, brand, imageUrl, mealType, servingAmount, servingUnit, nutrition } = req.body;
+    
+    if (!foodName || !mealType || !servingAmount || !nutrition) {
+      return res.status(400).json({ 
+        error: 'Required fields: foodName, mealType, servingAmount, nutrition' 
+      });
+    }
+    
+    const foodEntry = new FoodEntry({
+      userId: req.user._id,
+      date: new Date(),
+      mealType,
+      food: {
+        id: foodId,
+        name: foodName,
+        brand: brand || '',
+        imageUrl: imageUrl || null
+      },
+      nutrition,
+      servingSize: {
+        amount: servingAmount,
+        unit: servingUnit || 'g'
+      }
+    });
+    
+    await foodEntry.save();
+    res.json({ message: 'Food logged successfully', entry: foodEntry });
+  } catch (error) {
+    console.error('Food logging error:', error);
+    res.status(500).json({ error: 'Failed to log food entry' });
+  }
+});
+
+// Get daily food log
+app.get('/api/food/log/:date?', verifyToken, async (req, res) => {
+  try {
+    const date = req.params.date ? new Date(req.params.date) : new Date();
+    const startOfDay = new Date(date.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+    
+    const entries = await FoodEntry.find({
+      userId: req.user._id,
+      date: { $gte: startOfDay, $lte: endOfDay }
+    }).sort({ createdAt: 1 });
+    
+    // Calculate daily totals
+    const dailyTotals = entries.reduce((totals, entry) => {
+      totals.energy += entry.nutrition.energy || 0;
+      totals.protein += entry.nutrition.protein || 0;
+      totals.fat += entry.nutrition.fat || 0;
+      totals.carbohydrates += entry.nutrition.carbohydrates || 0;
+      totals.fiber += entry.nutrition.fiber || 0;
+      totals.sugar += entry.nutrition.sugar || 0;
+      totals.sodium += entry.nutrition.sodium || 0;
+      return totals;
+    }, {
+      energy: 0,
+      protein: 0,
+      fat: 0,
+      carbohydrates: 0,
+      fiber: 0,
+      sugar: 0,
+      sodium: 0
+    });
+    
+    // Group by meal type
+    const mealGroups = {
+      breakfast: entries.filter(e => e.mealType === 'breakfast'),
+      lunch: entries.filter(e => e.mealType === 'lunch'),
+      dinner: entries.filter(e => e.mealType === 'dinner'),
+      snack: entries.filter(e => e.mealType === 'snack')
+    };
+    
+    res.json({ 
+      date: startOfDay.toISOString().split('T')[0],
+      dailyTotals,
+      mealGroups,
+      totalEntries: entries.length
+    });
+  } catch (error) {
+    console.error('Food log retrieval error:', error);
+    res.status(500).json({ error: 'Failed to get food log' });
+  }
+});
+
+// Set nutrition goals
+app.post('/api/nutrition/goals', verifyToken, validateNutritionGoals, async (req, res) => {
+  try {
+    const { calories, protein, fat, carbohydrates, fiber, sodium, goalType, weeklyWeightGoal } = req.body;
+    
+    if (!calories) {
+      return res.status(400).json({ error: 'Daily calorie goal is required' });
+    }
+    
+    const goals = await NutritionGoal.findOneAndUpdate(
+      { userId: req.user._id },
+      {
+        dailyGoals: { calories, protein, fat, carbohydrates, fiber, sodium },
+        goalType: goalType || 'maintain',
+        weeklyWeightGoal: weeklyWeightGoal || 0,
+        activityLevel: req.user.profile?.activityLevel || 'moderatelyActive'
+      },
+      { upsert: true, new: true }
+    );
+    
+    res.json({ message: 'Nutrition goals updated successfully', goals });
+  } catch (error) {
+    console.error('Nutrition goals error:', error);
+    res.status(500).json({ error: 'Failed to update nutrition goals' });
+  }
+});
+
+// Get nutrition goals
+app.get('/api/nutrition/goals', verifyToken, async (req, res) => {
+  try {
+    const goals = await NutritionGoal.findOne({ userId: req.user._id });
+    
+    if (!goals) {
+      // Calculate default goals based on user profile
+      if (req.user.profile) {
+        const { weight, height, age, gender, activityLevel } = req.user.profile;
+        const fitBot = new FitBotAI();
+        const bmr = fitBot.calculateBMR(weight, height, age, gender);
+        const dailyCalories = fitBot.calculateDailyCalories(bmr, activityLevel);
+        
+        const defaultGoals = {
+          calories: dailyCalories,
+          protein: Math.round(weight * 1.6), // 1.6g per kg
+          fat: Math.round(dailyCalories * 0.25 / 9), // 25% of calories
+          carbohydrates: Math.round((dailyCalories - (weight * 1.6 * 4) - (dailyCalories * 0.25)) / 4),
+          fiber: 25, // General recommendation
+          sodium: 2300 // mg, general recommendation
+        };
+        
+        return res.json({ 
+          dailyGoals: defaultGoals,
+          goalType: 'maintain',
+          weeklyWeightGoal: 0,
+          activityLevel,
+          isDefault: true
+        });
+      }
+      
+      return res.status(404).json({ error: 'No nutrition goals set and no profile available' });
+    }
+    
+    res.json(goals);
+  } catch (error) {
+    console.error('Get nutrition goals error:', error);
+    res.status(500).json({ error: 'Failed to get nutrition goals' });
+  }
+});
+
+// Get daily nutrition summary
+app.get('/api/nutrition/daily/:date?', verifyToken, async (req, res) => {
+  try {
+    const date = req.params.date ? new Date(req.params.date) : new Date();
+    const startOfDay = new Date(date.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+    
+    const entries = await FoodEntry.find({
+      userId: req.user._id,
+      date: { $gte: startOfDay, $lte: endOfDay }
+    }).sort({ createdAt: 1 });
+    
+    // Calculate daily totals
+    const totalNutrition = entries.reduce((totals, entry) => {
+      totals.energy += entry.nutrition.energy || 0;
+      totals.protein += entry.nutrition.protein || 0;
+      totals.fat += entry.nutrition.fat || 0;
+      totals.carbohydrates += entry.nutrition.carbohydrates || 0;
+      totals.fiber += entry.nutrition.fiber || 0;
+      totals.sugar += entry.nutrition.sugar || 0;
+      totals.sodium += entry.nutrition.sodium || 0;
+      return totals;
+    }, {
+      energy: 0,
+      protein: 0,
+      fat: 0,
+      carbohydrates: 0,
+      fiber: 0,
+      sugar: 0,
+      sodium: 0
+    });
+    
+    // Group by meal type with foods and calories
+    const mealBreakdown = {
+      breakfast: {
+        foods: entries.filter(e => e.mealType === 'breakfast').map(e => ({
+          id: e._id,
+          name: e.food.name,
+          calories: e.nutrition.energy || 0,
+          servingSize: e.servingSize
+        })),
+        totalCalories: entries.filter(e => e.mealType === 'breakfast')
+          .reduce((sum, e) => sum + (e.nutrition.energy || 0), 0)
+      },
+      lunch: {
+        foods: entries.filter(e => e.mealType === 'lunch').map(e => ({
+          id: e._id,
+          name: e.food.name,
+          calories: e.nutrition.energy || 0,
+          servingSize: e.servingSize
+        })),
+        totalCalories: entries.filter(e => e.mealType === 'lunch')
+          .reduce((sum, e) => sum + (e.nutrition.energy || 0), 0)
+      },
+      dinner: {
+        foods: entries.filter(e => e.mealType === 'dinner').map(e => ({
+          id: e._id,
+          name: e.food.name,
+          calories: e.nutrition.energy || 0,
+          servingSize: e.servingSize
+        })),
+        totalCalories: entries.filter(e => e.mealType === 'dinner')
+          .reduce((sum, e) => sum + (e.nutrition.energy || 0), 0)
+      },
+      snack: {
+        foods: entries.filter(e => e.mealType === 'snack').map(e => ({
+          id: e._id,
+          name: e.food.name,
+          calories: e.nutrition.energy || 0,
+          servingSize: e.servingSize
+        })),
+        totalCalories: entries.filter(e => e.mealType === 'snack')
+          .reduce((sum, e) => sum + (e.nutrition.energy || 0), 0)
+      }
+    };
+    
+    res.json({
+      date: startOfDay.toISOString().split('T')[0],
+      totalNutrition,
+      mealBreakdown,
+      totalEntries: entries.length
+    });
+  } catch (error) {
+    console.error('Daily nutrition error:', error);
+    res.status(500).json({ error: 'Failed to get daily nutrition data' });
+  }
+});
+
+// Delete food entry
+app.delete('/api/food/log/:entryId', verifyToken, async (req, res) => {
+  try {
+    const { entryId } = req.params;
+    
+    const entry = await FoodEntry.findOneAndDelete({
+      _id: entryId,
+      userId: req.user._id
+    });
+    
+    if (!entry) {
+      return res.status(404).json({ error: 'Food entry not found' });
+    }
+    
+    res.json({ message: 'Food entry deleted successfully' });
+  } catch (error) {
+    console.error('Food entry deletion error:', error);
+    res.status(500).json({ error: 'Failed to delete food entry' });
   }
 });
 

@@ -74,10 +74,62 @@ const validateChat = [
   handleValidationErrors
 ];
 
+// Food logging validation rules
+const validateFoodLog = [
+  body('foodName')
+    .trim()
+    .isLength({ min: 1, max: 200 })
+    .withMessage('Food name is required and must be less than 200 characters'),
+  body('mealType')
+    .isIn(['breakfast', 'lunch', 'dinner', 'snack'])
+    .withMessage('Meal type must be breakfast, lunch, dinner, or snack'),
+  body('servingAmount')
+    .isFloat({ min: 0.1, max: 10000 })
+    .withMessage('Serving amount must be between 0.1 and 10000'),
+  body('servingUnit')
+    .trim()
+    .isLength({ min: 1, max: 20 })
+    .withMessage('Serving unit is required'),
+  body('foodId')
+    .trim()
+    .isLength({ min: 1 })
+    .withMessage('Food ID is required'),
+  body('nutrition')
+    .isObject()
+    .withMessage('Nutrition data is required'),
+  handleValidationErrors
+];
+
+// Nutrition goals validation rules
+const validateNutritionGoals = [
+  body('calories')
+    .isInt({ min: 800, max: 5000 })
+    .withMessage('Daily calories must be between 800 and 5000'),
+  body('protein')
+    .optional()
+    .isFloat({ min: 0, max: 500 })
+    .withMessage('Protein must be between 0 and 500g'),
+  body('fat')
+    .optional()
+    .isFloat({ min: 0, max: 300 })
+    .withMessage('Fat must be between 0 and 300g'),
+  body('carbohydrates')
+    .optional()
+    .isFloat({ min: 0, max: 800 })
+    .withMessage('Carbohydrates must be between 0 and 800g'),
+  body('goalType')
+    .optional()
+    .isIn(['maintain', 'lose', 'gain'])
+    .withMessage('Goal type must be maintain, lose, or gain'),
+  handleValidationErrors
+];
+
 module.exports = {
   validateSignup,
   validateLogin,
   validateProfile,
   validateChat,
+  validateFoodLog,
+  validateNutritionGoals,
   handleValidationErrors
 };
