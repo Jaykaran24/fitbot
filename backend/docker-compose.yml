@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    container_name: fitbot_backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb+srv://Admin:Admin2435@cluster0.3ie2r5o.mongodb.net/fitbot
+      - JWT_SECRET=fitbot-prod-jwt-2025-secure-key-32chars-min-jayka-videos
+      - PORT=3000
+      - ALLOWED_ORIGINS=http://localhost:3001,http://127.0.0.1:3001
+      - OPEN_FOOD_FACTS_API_URL=https://world.openfoodfacts.org/api/v2
+      - OPENROUTER_API_KEY=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
+      - OPENROUTER_API_URL=https://openrouter.ai/api/v1/chat/completions
+      - OPENROUTER_MODEL=openai/gpt-3.5-turbo
+      - ENABLE_EXTERNAL_AI=true
+      - ENABLE_FOOD_SEARCH=true
+      - ENABLE_NUTRITION_TRACKING=true
+      - ENABLE_METRICS_ENDPOINT=true
+      - ENABLE_HEALTH_CHECKS=true
+      - LOG_LEVEL=info
+      - LOG_FORMAT=combined
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    networks:
+      - fitbot_network
+
+volumes: {}
+
+networks:
+  fitbot_network:
+    driver: bridge

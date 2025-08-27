@@ -1,0 +1,17 @@
+{
+  "name": "fitbot-frontend",
+  "version": "1.0.0",
+  "description": "FitBot AI Frontend - Web interface for nutrition tracking",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx live-server --port=3001 --host=localhost",
+    "dev": "npx live-server --port=3001 --host=localhost --watch=.",
+    "build": "echo 'Static files ready for deployment'",
+    "serve": "python -m http.server 3001"
+  },
+  "author": "Jay karan chaturvedi",
+  "license": "ISC",
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}

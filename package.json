@@ -1,51 +1,29 @@
 {
-  "name": "fitbot",
+  "name": "fitbot-fullstack",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "FitBot AI - Full Stack Nutrition Tracking Application",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "lint": "eslint *.js middleware/ models/ services/ utils/ config/",
-    "lint:fix": "eslint *.js middleware/ models/ services/ utils/ config/ --fix",
-    "format": "prettier --write *.js middleware/ models/ services/ utils/ config/ public/",
-    "validate": "npm run lint && npm run test",
-    "security-check": "npm audit"
+    "dev:all": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm start",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "docker:build": "docker-compose -f docker-compose.fullstack.yml build",
+    "docker:up": "docker-compose -f docker-compose.fullstack.yml up",
+    "docker:up:build": "docker-compose -f docker-compose.fullstack.yml up --build",
+    "docker:down": "docker-compose -f docker-compose.fullstack.yml down"
   },
   "keywords": [
     "fitness",
     "nutrition",
     "chatbot",
-    "ai"
+    "ai",
+    "fullstack"
   ],
   "author": "Jay karan chaturvedi",
   "license": "ISC",
-  "description": "An AI chatbot that helps users track daily nutrient intake based on BMI and activity level",
-  "dependencies": {
-    "axios": "^1.11.0",
-    "bcryptjs": "^3.0.2",
-    "body-parser": "^1.20.2",
-    "compression": "^1.8.1",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "dotenv-safe": "^9.1.0",
-    "express": "^4.18.2",
-    "express-rate-limit": "^8.0.1",
-    "express-validator": "^7.2.1",
-    "helmet": "^8.1.0",
-    "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.0.3",
-    "winston": "^3.17.0"
-  },
   "devDependencies": {
-    "@eslint/js": "^9.34.0",
-    "@ljharb/tsconfig": "^0.3.2",
-    "eslint": "^9.34.0",
-    "jest": "^30.0.5",
-    "nodemon": "^3.1.10",
-    "prettier": "^3.6.2",
-    "supertest": "^7.1.4"
+    "concurrently": "^8.2.2"
   }
 }
