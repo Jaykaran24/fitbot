@@ -100,3 +100,8 @@ db/
 
 # Uploads
 uploads/
+
+# Large data files
+*.csv
+en.openfoodfacts.org.products.csv
+database/en.openfoodfacts.org.products.csv
