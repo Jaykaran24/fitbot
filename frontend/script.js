@@ -571,7 +571,7 @@ async function searchFood() {
     resultsDiv.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
 
     try {
-        const response = await fetch('/api/food/search', {
+        const response = await fetch(`${API_BASE}/food/search`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -766,7 +766,7 @@ async function logFood() {
         // Calculate nutrition for the specific serving size
         const nutrition = calculateNutritionForServing(selectedFood.nutriments, servingAmount, servingUnit);
         
-        const response = await fetch('/api/food/log', {
+        const response = await fetch(`${API_BASE}/food/log`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

@@ -203,8 +203,15 @@ app.post('/api/auth/login', authLimiter, validateLogin, async (req, res) => {
 
 // Chat endpoint
 app.post('/api/chat', chatLimiter, verifyToken, validateChat, async (req, res) => {
+  const startTime = Date.now();
+  console.log('=====================================');
+  console.log(`🚀 New Chat Request - ${new Date().toISOString()}`);
+  
   try {
     const { message, userData, useExternalAI } = req.body;
+    console.log(`📝 Message: "${message}"`);
+    console.log(`🔧 External AI Enabled: ${useExternalAI !== false}`);
+    
     if (!message) {
       return res.status(400).json({ error: 'Message is required.' });
     }
@@ -214,22 +221,34 @@ app.post('/api/chat', chatLimiter, verifyToken, validateChat, async (req, res) =
 
     const shouldUseExternal = useExternalAI !== false;
     let source = 'local';
+    let reply;
 
-    // Process message with our offline AI
-    let reply = fitBot.processMessage(message, userData || req.user.profile || {});
-
-    // If offline AI returns default response, try OpenRouter fallback
-    if (reply === fitBot.defaultResponse && shouldUseExternal) {
+    // If external AI is enabled, bypass local AI and go directly to OpenRouter
+    if (shouldUseExternal) {
+      console.log('🌐 External AI enabled - bypassing local AI, going directly to OpenRouter');
+      console.log(`📝 User Message: "${message}"`);
+      console.log(`👤 User Profile:`, userData || req.user.profile || {});
+      
       try {
         const openRouterReply = await getOpenRouterReply(message, userData || req.user.profile || {});
         if (openRouterReply) {
+          console.log(`✅ OpenRouter Success - Response received: "${openRouterReply}"`);
           reply = openRouterReply;
           source = 'openrouter';
+        } else {
+          console.log('⚠️ OpenRouter returned empty response, falling back to local AI');
+          reply = fitBot.processMessage(message, userData || req.user.profile || {});
         }
       } catch (apiError) {
-        console.error('OpenRouter API error:', apiError.message);
-        // keep reply as default if OpenRouter fails
+        console.error('❌ OpenRouter API error:', apiError.message);
+        console.log('🔄 Falling back to local AI response');
+        reply = fitBot.processMessage(message, userData || req.user.profile || {});
       }
+    } else {
+      // External AI disabled - use local AI only
+      console.log('🚫 External AI disabled - using local AI only');
+      reply = fitBot.processMessage(message, userData || req.user.profile || {});
+      console.log(`💭 Local AI Response: "${reply}"`);
     }
     
     // Save chat log to database
@@ -259,6 +278,11 @@ app.post('/api/chat', chatLimiter, verifyToken, validateChat, async (req, res) =
       console.error('Error saving chat log:', dbError);
       // Don't fail the request if chat logging fails
     }
+    
+    // Final response logging
+    console.log(`📤 Final Response (${source}): "${reply}"`);
+    console.log(`⏱️ Chat completion time: ${Date.now() - startTime} ms`);
+    console.log('=====================================');
     
     res.json({ reply, source });
   } catch (error) {
