@@ -154,7 +154,7 @@ This project is licensed under the ISC License - see the LICENSE file for detail
 ## 👨‍💻 Author
 
 **Jay Karan Chaturvedi**
-- Email: jay@example.com
+- Email: jaykaranchaturvedi844@gmail.com 
 - GitHub: [@0808cs231093ies-dev](https://github.com/0808cs231093ies-dev)
 
 ---
