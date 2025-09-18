@@ -15,7 +15,7 @@ let externalToggleCheckbox = null;
 let quickPromptsBar = null;
 
 // API base URL - Backend server
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = 'https://fitbot-35lx.onrender.com/api';
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
